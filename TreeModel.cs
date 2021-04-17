@@ -34,7 +34,7 @@ namespace Tree
                     _stream.Dispose();
                     _stream = null;
                 }
-                 _stream = new MemoryStream();
+                _stream = new MemoryStream();
                 formatter.Serialize(_stream, Root);
             }
 
@@ -167,7 +167,6 @@ namespace Tree
                     Root.FindDeltas(delta);
                     Root.Update(inputs, mu);
                 }
-                //if (0 == step || Steps - 1 == step) Console.WriteLine(Root.GetTreePoints());
                 double error = EstimateTreeAccuracy(Root, DataType.SELECT);
                 if (error < minError)
                 {
