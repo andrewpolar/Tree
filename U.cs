@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -64,12 +64,12 @@ namespace Tree
             }
         }
 
-        public void Update(double y, double[] inputs, double mu)
+        public void Update(double y, double[] inputs, double mu, bool isLeaf)
         {
             y /= _nt;
             for (int i = 0; i < _nt; ++i)
             {
-                _plist[i].Update(inputs[_positions[i]], y, mu);
+                _plist[i].Update(inputs[_positions[i]], y, mu, isLeaf);
             }
         }
 
@@ -88,14 +88,12 @@ namespace Tree
             return _nt;
         }
 
-        public int GetNPoints()
+        public void PrintMinMax()
         {
-            int nPoints = 0;
-            foreach (PLL pll in _plist)
+            for (int i = 0; i < _nt; ++i)
             {
-                nPoints += pll.GetNumberOfPoints();
+                _plist[i].PrintMinMax();
             }
-            return nPoints;
         }
 
         public void ShowOperator()
@@ -116,4 +114,6 @@ namespace Tree
         }
     }
 }
+
+
 
