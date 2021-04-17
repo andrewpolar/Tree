@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -81,31 +81,24 @@ namespace Tree
         {
             if (null == _Left && null == _Right)
             {
-                _u.Update(_delta, inputs, mu);
+                _u.Update(_delta, inputs, mu, true);
             }
             else
             {
-                _u.Update(_delta, _x, mu);
+                _u.Update(_delta, _x, mu, false);
                 _Left.Update(inputs, mu);
                 _Right.Update(inputs, mu);
             }
         }
 
+        public void PrintMinMax()
+        {
+            _u.PrintMinMax();
+        }
+
         public int GetLevel()
         {
             return _Level;
-        }
-
-        public int GetTreePoints()
-        {
-            if (null == _Left && null == _Right)
-            {
-                return _u.GetNPoints();
-            }
-            else
-            {
-                return _u.GetNPoints() + _Left.GetTreePoints() + _Right.GetTreePoints();
-            }
         }
     }
 }

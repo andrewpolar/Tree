@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -11,6 +11,10 @@ namespace Tree
         private double[] _x;
         private double[] _y;
         private double _deltax;
+
+        const double _zet = 0.0005;
+        private double _limm;
+        private double _limv;
  
         public PLL(int points, double xmin, double xmax)
         {
@@ -41,17 +45,13 @@ namespace Tree
             {
                 _y[i] = (rnd.Next() % 100) / 100.0 * (ymax - ymin) + ymin;
             }
-            for (int i = 0; i < _points - 1; ++i)
-            {
-                _y[i] = (_y[i] + _y[i + 1]) / 2.0;
-            }
         }
 
         public double GetDerrivative(double x)
         {
             int low = (int)((x - _x[0]) / _deltax);
             if (low < 0) low = 0;
-            if (low > _x.Length - 2) low = _x.Length - 2;
+            if (low > _points - 2) low = _points - 2;
             return (_y[low + 1] - _y[low]) / _deltax;
         }
 
@@ -71,19 +71,19 @@ namespace Tree
             _x = new double[_points];
             _y = new double[_points];
             _deltax = (xmax - xmin) / (_points - 1);
-            _x[0] = xmin;
-            _y[0] = 0.0;
-            for (int i = 1; i < _x.Length; ++i)
+            for (int i = 0; i < _points; ++i)
             {
-                _x[i] = _x[i - 1] + _deltax;
+                _x[i] = xmin + i * _deltax;
                 _y[i] = 0.0;
             }
+            _limm = (xmax + xmin) / 2.0;
+            _limv = (xmax - xmin) * (xmax - xmin) / 12.0;
         }
 
         public void Resize(int N)
         {
             double[] tmp = new double[N];
-            double deltax = (_x[_x.Length - 1] - _x[0]) / (N - 1);
+            double deltax = (_x[_points - 1] - _x[0]) / (N - 1);
             double min = _x[0];
             for (int i = 0; i < N; ++i)
             {
@@ -94,7 +94,7 @@ namespace Tree
             _x = new double[N];
             _y = new double[N];
             _deltax = deltax;
-            for (int i = 0; i < _x.Length; ++i)
+            for (int i = 0; i < N; ++i)
             {
                 _x[i] = min + i * _deltax;
                 _y[i] = tmp[i];
@@ -102,75 +102,49 @@ namespace Tree
             _points = N;
         }
 
-
-        private void ChangeFieldOfDefinition(bool isBottom)
+        private void Renormalize(double xmin, double xmax)
         {
-            if (isBottom)
+            double[] xnew = new double[_points];
+            double[] ynew = new double[_points];
+            _deltax = (xmax - xmin) / (_points - 1);
+            for (int i = 0; i < _points; ++i)
             {
-                _points += 1;
-                double[] tmpX = new double[_points];
-                double[] tmpY = new double[_points];
-                tmpX[0] = _x[0] - _deltax;
-                tmpY[0] = 0.0;
-                for (int i = 1; i < _points; ++i)
-                {
-                    tmpX[i] = _x[i - 1];
-                    tmpY[i] = _y[i - 1];
-                }
-                _x = new double[_points];
-                _y = new double[_points];
-                for (int i = 0; i < _points; ++i)
-                {
-                    _x[i] = tmpX[i];
-                    _y[i] = tmpY[i];
-                }
+                xnew[i] = xmin + i * _deltax;
+                ynew[i] = GetFunction(xnew[i]);
             }
-            else
+            for (int i = 0; i < _points; ++i)
             {
-                _points += 1;
-                double[] tmpX = new double[_points];
-                double[] tmpY = new double[_points];
-                tmpX[_points - 1] = _x[_x.Length - 1] + _deltax;
-                tmpY[_points - 1] = 0.0;
-                for (int i = 0; i < _points - 1; ++i)
-                {
-                    tmpX[i] = _x[i];
-                    tmpY[i] = _y[i];
-                }
-                _x = new double[_points];
-                _y = new double[_points];
-                for (int i = 0; i < _points; ++i)
-                {
-                    _x[i] = tmpX[i];
-                    _y[i] = tmpY[i];
-                }
+                _x[i] = xnew[i];
+                _y[i] = ynew[i];
             }
         }
 
-        public void Update(double x, double delta, double mu)
+        public void Update(double x, double delta, double mu, bool isLeaf)
         {
-            if (x < _x[0])
-            {
-                ChangeFieldOfDefinition(true);
-            }
+            _limm = (_limm + _zet * x) / (1 + _zet);
+            _limv = (_limv + _zet * (_limm - x) * (_limm - x)) / (1 + _zet);
+            double xmin = _limm - Math.Sqrt(3.0 * _limv);
+            double xmax = _limm + Math.Sqrt(3.0 * _limv);
 
-            if (x > _x[_x.Length - 1])
+            if (Math.Abs(xmin - _x[0]) > _deltax || Math.Abs(xmax - _x[_points - 1]) > _deltax)
             {
-                ChangeFieldOfDefinition(false);
+                if (!isLeaf)
+                {
+                    Renormalize(xmin, xmax);
+                }
             }
 
             int left = (int)((x - _x[0]) / _deltax);
             if (left < 0) left = 0;
-            if (left >= _y.Length - 1)
-            {
-                _y[_y.Length - 1] += delta * mu;
-                return;
-            }
+            if (left > _points - 2) left = _points - 2;
 
-            double leftx = x - _x[left];
-            double rightx = _x[left + 1] - x;
-            _y[left + 1] += delta * leftx / _deltax * mu;
-            _y[left] += delta * rightx / _deltax * mu;
+            if (x >= _x[0] && x <= _x[_points - 1])
+            {
+                double leftx = x - _x[left];
+                double rightx = _x[left + 1] - x;
+                _y[left + 1] += delta * leftx / _deltax * mu;
+                _y[left] += delta * rightx / _deltax * mu;
+            }
         }
 
         public double GetFunction(double x)
@@ -180,29 +154,36 @@ namespace Tree
                 double derrivative = (_y[1] - _y[0]) / _deltax;
                 return _y[1] - derrivative * (_x[1] - x);
             }
-            if (x > _x[_x.Length - 1])
+            if (x > _x[_points - 1])
             {
-                double derrivative = (_y[_y.Length - 1] - _y[_y.Length - 2]) / _deltax;
-                return _y[_y.Length - 2] + derrivative * (x - _x[_x.Length - 2]);
+                double derrivative = (_y[_points - 1] - _y[_points - 2]) / _deltax;
+                return _y[_points - 2] + derrivative * (x - _x[_points - 2]);
             }
+
             int left = (int)((x - _x[0]) / _deltax);
             if (left < 0) left = 0;
-            if (left >= _x.Length - 1) return _y[_x.Length - 1];
+            if (left > _points - 2) left = _points - 2;
+
             double leftx = x - _x[left];
             return (_y[left + 1] - _y[left]) / _deltax * leftx + _y[left];
         }
 
         public void ShowData()
         {
-            for (int i = 0; i < _x.Length; ++i)
+            for (int i = 0; i < _points; ++i)
             {
                 Console.WriteLine("{0:0.0000} {1:0.0000}", _x[i], _y[i]);
             }
         }
 
+        public void PrintMinMax()
+        {
+            Console.WriteLine("PLL xmin-layer={0:0.0000} xmax-layer={1:0.0000}", _x[0], _x[_points - 1]);
+        }
+
         public double GetY(int pos)
         {
-            if (pos > _y.Length - 1) pos = _y.Length - 1;
+            if (pos > _points - 1) pos = _points - 1;
             if (pos < 0) pos = 0;
             return _y[pos];
         }
@@ -219,7 +200,7 @@ namespace Tree
 
         public double GetXmax()
         {
-            return _x[_x.Length - 1];
+            return _x[_points - 1];
         }
 
         public double[] GetAllFunc()
@@ -235,6 +216,21 @@ namespace Tree
         public double GetDeltax()
         {
             return _deltax;
+        }
+
+        public double GetXMean()
+        {
+            return _limm;
+        }
+
+        public double GetXVar()
+        {
+            return _limv;
+        }
+
+        public int GetNPoints()
+        {
+            return _points;
         }
     }
 }
