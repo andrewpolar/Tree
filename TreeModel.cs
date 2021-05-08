@@ -110,9 +110,8 @@ namespace Tree
             for (int i = 0; i < _dh._target.Count; ++i)
             {
                 if (_dh._dt[i] != dataType) continue;
-                double[] inputs = _dh._inputs[i];
                 double z = _dh._target[i];
-                double model = Root.GetResult(inputs);
+                double model = Root.GetResult(_dh._inputs[i]);
                 x.Add(model);
                 y.Add(z);
                 error += (z - model) * (z - model);
